@@ -1,0 +1,5 @@
+com.ioc.security.rbac.autoconfigure.RbacStoreAutoConfiguration
+com.ioc.security.rbac.autoconfigure.RbacAutoConfiguration
+com.ioc.security.rbac.autoconfigure.RbacMethodSecurityAutoConfiguration
+com.ioc.security.rbac.autoconfigure.RbacWebSecurityAutoConfiguration
+com.ioc.security.rbac.test.RbacTestAutoConfiguration

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Java ${{ matrix.java }} / Spring Boot ${{ matrix.boot }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { java: '17', boot: '3.5.16', extra: '' }
+          - { java: '21', boot: '3.5.16', extra: '' }
+          - { java: '17', boot: '3.4.10', extra: '' }
+          - { java: '17', boot: '3.3.13', extra: '' }
+          - { java: '17', boot: '3.2.12', extra: '-Dlegacy-flyway' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      # Docker is available on GitHub runners, so the PostgreSQL Testcontainers tests run here.
+      - name: Build and test
+        run: mvn -B -ntp verify -Dspring-boot.version=${{ matrix.boot }} ${{ matrix.extra }}

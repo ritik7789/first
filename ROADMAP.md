@@ -1,7 +1,8 @@
 # Generic RBAC for Spring Boot — Roadmap
 
-> Status: **DRAFT, awaiting review.** No code is written until this roadmap is approved.
-> Target stack: **Java 17**, **Spring Boot 3.x** (3.2+), Spring Security 6.x, Maven.
+> Status: **v1 implemented.** All phases are delivered; see [§10 Delivery status](#10-delivery-status--decisions).
+> Target stack: **Java 17**, **Spring Boot 3.x** (tested on 3.2, 3.3, 3.4 and 3.5), Spring Security 6.x, Maven.
+> Group ID / base package: `com.ioc.security` / `com.ioc.security.rbac`.
 
 ---
 
@@ -268,4 +269,43 @@ Configuration metadata (`spring-configuration-metadata.json`) will be generated 
 7. **WebFlux** — do any target apps use reactive stack?
 8. **Existing role tables** — do your target apps already have `roles`/`user_roles` tables you'd want an adapter for rather than new `rbac_*` tables?
 
-Once you approve (or adjust) this roadmap, implementation will start with Phase 0 → Phase 3 and be pushed to branch `claude/springboot-rbac-generic-tgr6c1`.
+**Answers (review of 2026-09-23):**
+1. `com.ioc.security`
+2. Maven
+3. All phases
+4. PostgreSQL first, but keep the schema portable to any relational database
+5. Flyway
+6. Multi-tenancy included in v1
+7. No WebFlux yet (airline applications are in progress), so the core stays reactive-ready
+8. Create new tables
+
+---
+
+## 10. Delivery status & decisions
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0: Scaffolding | Done | Maven multi-module, Java 17 `release`, JaCoCo, GitHub Actions matrix (Java 17/21 × Boot 3.2–3.5). |
+| 1: Core | Done | Model, SPI, wildcard matcher, hierarchical resolver, TTL cache, `RbacAdministration` (validation, cycle detection, change listeners), in-memory store. |
+| 2: Auto-configuration | Done | Annotations through a Spring AOP advisor (no AspectJ, no `@EnableMethodSecurity` needed), `@rbac` SpEL bean, `PermissionEvaluator` with an expression handler, URL rules, subject and tenant resolvers, authority bridge. |
+| 3: Persistence | Done, **JDBC instead of JPA** | See decision D1. Flyway with a separate history table; common SQL plus a SQL Server variant. |
+| 4: Admin API | Done | CRUD, `/me`, effective permissions, ProblemDetail errors, tenant-scoped management, protection against privilege escalation. springdoc annotations not added (optional dependency; can be added later). |
+| 5: Cross-cutting | Done | Audit events and `rbac.audit` logger, Micrometer counters, multi-tenancy, expiring assignments, cache eviction and `RbacDataChangedEvent` for clusters. |
+| 6: Testing support | Done | `@WithRbacUser`, `@AutoConfigureRbac`, auto-included in `@WebMvcTest`. |
+| 7: Sample and migration guide | Done | Airline sample (tenants = airlines, header `X-Airline`), `README.md`, `MIGRATION.md`. The sample uses HTTP Basic rather than JWT, to keep it self-contained; the JWT integration ships as `RbacJwtAuthoritiesConverter` and `rbac.subject.claim`. |
+| 8: Hardening | Done (partly) | Compatibility checked locally on Boot 3.2.12, 3.3.13, 3.4.10 and 3.5.16. Security review fixes: super-admin escalation (D4) and a guard for the host's Flyway (D3). Publishing: a `release` profile attaches sources and javadoc. `distributionManagement` (Nexus, Artifactory or GitHub Packages) still needs your repository URL. |
+
+**Decisions made during implementation**
+
+- **D1: JDBC store instead of JPA.** A library's JPA entities are only picked up if the host changes its `@EntityScan`, which then overrides Boot's defaults. They can also clash with the host's naming strategy. Plain SQL through `JdbcTemplate` works the same in JPA, JDBC and MyBatis applications. It joins a host transaction on the same DataSource when one is active.
+- **D2: Portable schema.** Natural keys (role name, permission code) and no identity or sequence columns. Global assignments store `'*'` as `tenant_id`, so the composite primary key works on every database, since NULL handling in unique keys differs between vendors. Timestamps are stored as UTC `TIMESTAMP` (`DATETIME2` on SQL Server).
+- **D3: Flyway isolation.** RBAC uses its own Flyway instance and its own `rbac_schema_history` table. It runs after the host's Flyway, so a host `V1` is never skipped by a baseline. If the host has no Flyway migrations of its own, Boot's host Flyway is turned off by default, because otherwise it would refuse to start on an existing schema.
+- **D4: Super-admin escalation.** The super-admin role grants no explicit permissions, so a "can only grant what you hold" check alone would let any RBAC admin assign it. It and any role inheriting from it can only be granted by super admins.
+- **D5: `flyway-database-postgresql` is not in the starter.** Boot 3.2 manages Flyway 9, where PostgreSQL support is part of `flyway-core`. Forcing the separate module would mix Flyway versions, so hosts on Boot 3.3+ add that one dependency themselves.
+- **D6: Role checks are weaker than permission checks.** A role that grants no permissions passes the anti-escalation check, so `@RequiresRole` on such a role can be satisfied by any RBAC admin. Prefer `@RequiresPermission`.
+
+**Next candidates (v1.x / v2)**
+- `rbac-reactive` module for WebFlux (the core has no servlet dependency, so only the Spring adapter is needed).
+- Redis- or Kafka-based cache invalidation adapter.
+- springdoc/OpenAPI annotations for the admin API.
+- Ownership / ABAC hooks (for example, "agent may only cancel bookings of their own office").

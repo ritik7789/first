@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ioc.security</groupId>
+        <artifactId>rbac-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>rbac-spring-boot-starter</artifactId>
+    <name>IOC RBAC :: Spring Boot Starter</name>
+    <description>One dependency to add RBAC (engine, JDBC store, Flyway schema, admin API) to a Spring Boot 3 application</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ioc.security</groupId>
+            <artifactId>rbac-spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ioc.security</groupId>
+            <artifactId>rbac-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ioc.security</groupId>
+            <artifactId>rbac-admin-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+    </dependencies>
+</project>

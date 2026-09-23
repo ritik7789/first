@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: airline
+      POSTGRES_USER: airline
+      POSTGRES_PASSWORD: airline
+    ports:
+      - "5432:5432"
