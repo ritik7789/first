@@ -1,0 +1,7 @@
+# Run with: docker compose -f rbac-sample-app/docker-compose.yml up -d
+#           mvn -pl rbac-sample-app spring-boot:run -Dspring-boot.run.profiles=postgres
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/airline
+    username: airline
+    password: airline

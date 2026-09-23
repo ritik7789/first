@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: airline-rbac-sample
+  datasource:
+    url: jdbc:h2:mem:airline;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+
+rbac:
+  super-admin-role: SUPER_ADMIN
+  multi-tenancy:
+    enabled: true
+    header: X-Airline          # airline code = tenant
+  cache:
+    ttl: 2m
+  admin-api:
+    enabled: true
+    base-path: /api/rbac
+  url-rules:
+    - pattern: /api/reports/revenue
+      methods: [GET]
+      permissions: [report:revenue]
+    - pattern: /actuator/**
+      permissions: [ops:monitor]
+  seed:
+    permissions:
+      "[flight:read]": View flight schedule
+      "[flight:create]": Add flights
+      "[flight:cancel]": Cancel flights
+      "[booking:read]": View bookings
+      "[booking:create]": Create bookings
+      "[booking:cancel]": Cancel bookings
+      "[booking:force-cancel]": Cancel bookings after departure cut-off
+      "[report:read]": Operational reports
+      "[report:revenue]": Revenue reports
+      "[ops:monitor]": Actuator / monitoring
+      "[rbac:read]": View roles and assignments
+      "[rbac:manage]": Manage roles and assignments
+    roles:
+      SUPER_ADMIN:
+        description: Unrestricted access
+      PASSENGER:
+        description: Self-service passenger
+        permissions: [flight:read, booking:read]
+      BOOKING_AGENT:
+        description: Airline booking agent
+        parent: PASSENGER
+        permissions: [booking:create, booking:cancel]
+      BOOKING_SUPERVISOR:
+        description: Supervises agents of one airline
+        parent: BOOKING_AGENT
+        permissions: [booking:force-cancel, report:read, rbac:read, rbac:manage]
+      OPS_MANAGER:
+        description: Network operations
+        parent: PASSENGER
+        permissions: ["flight:*", "report:*", ops:monitor]
+      RBAC_ADMIN:
+        description: Manages roles and permissions
+        permissions: [rbac:read, rbac:manage, "flight:*", "booking:*", "report:*", ops:monitor]
+    assignments:
+      - { subject: root, role: SUPER_ADMIN }
+      - { subject: ops, role: OPS_MANAGER }
+      - { subject: rbac-admin, role: RBAC_ADMIN }
+      - { subject: passenger, role: PASSENGER }
+      - { subject: agent-sky, role: BOOKING_AGENT, tenant: SKY }
+      - { subject: agent-blue, role: BOOKING_AGENT, tenant: BLUE }
+      - { subject: supervisor-sky, role: BOOKING_SUPERVISOR, tenant: SKY }
+
+logging:
+  level:
+    rbac.audit: INFO

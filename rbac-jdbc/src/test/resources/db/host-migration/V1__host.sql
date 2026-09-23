@@ -1,0 +1,1 @@
+CREATE TABLE host_table (id INT PRIMARY KEY);
