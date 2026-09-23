@@ -16,12 +16,23 @@ public class RbacJwtAuthoritiesConverter implements Converter<Jwt, Collection<Gr
 
     private final RbacAuthorityMapper mapper;
     private final String subjectClaim;
+    private final String tenantClaim;
     private final TenantResolver tenantResolver;
     private final JwtGrantedAuthoritiesConverter scopes = new JwtGrantedAuthoritiesConverter();
 
     public RbacJwtAuthoritiesConverter(RbacAuthorityMapper mapper, String subjectClaim, TenantResolver tenantResolver) {
+        this(mapper, subjectClaim, null, tenantResolver);
+    }
+
+    /**
+     * @param tenantClaim claim carrying the tenant; when absent from the token (or {@code null}) the tenant resolver
+     *                    is asked instead (e.g. to read a request header)
+     */
+    public RbacJwtAuthoritiesConverter(RbacAuthorityMapper mapper, String subjectClaim, String tenantClaim,
+                                       TenantResolver tenantResolver) {
         this.mapper = mapper;
         this.subjectClaim = subjectClaim == null || subjectClaim.isBlank() ? "sub" : subjectClaim;
+        this.tenantClaim = tenantClaim == null || tenantClaim.isBlank() ? null : tenantClaim;
         this.tenantResolver = tenantResolver;
     }
 
@@ -32,6 +43,10 @@ public class RbacJwtAuthoritiesConverter implements Converter<Jwt, Collection<Gr
         if (subject == null) {
             return existing;
         }
-        return mapper.merge(existing, subject, tenantResolver.resolve(null));
+        String tenant = tenantClaim == null ? null : jwt.getClaimAsString(tenantClaim);
+        if (tenant == null || tenant.isBlank()) {
+            tenant = tenantResolver.resolve(null);
+        }
+        return mapper.merge(existing, subject, tenant);
     }
 }

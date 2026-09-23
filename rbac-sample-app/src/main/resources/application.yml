@@ -12,11 +12,21 @@ management:
       exposure:
         include: health,metrics
 
+airline:
+  jwt:
+    # DEMO ONLY - HS256 key for the built-in token endpoint. Override via AIRLINE_JWT_SECRET; in production use
+    # spring.security.oauth2.resourceserver.jwt.issuer-uri of your identity provider instead.
+    secret: ${AIRLINE_JWT_SECRET:change-me-demo-secret-at-least-32-bytes-long}
+    ttl: 1h
+
 rbac:
   super-admin-role: SUPER_ADMIN
+  subject:
+    claim: preferred_username  # the JWT "sub" is an opaque UUID; RBAC assignments use the username
   multi-tenancy:
     enabled: true
-    header: X-Airline          # airline code = tenant
+    claim: airline             # tenant from the token (airline staff are bound to their airline) ...
+    header: X-Airline          # ... or, for tokens without that claim, from this header
   cache:
     ttl: 2m
   admin-api:

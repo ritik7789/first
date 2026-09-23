@@ -292,7 +292,7 @@ Configuration metadata (`spring-configuration-metadata.json`) will be generated 
 | 4: Admin API | Done | CRUD, `/me`, effective permissions, ProblemDetail errors, tenant-scoped management, protection against privilege escalation. springdoc annotations not added (optional dependency; can be added later). |
 | 5: Cross-cutting | Done | Audit events and `rbac.audit` logger, Micrometer counters, multi-tenancy, expiring assignments, cache eviction and `RbacDataChangedEvent` for clusters. |
 | 6: Testing support | Done | `@WithRbacUser`, `@AutoConfigureRbac`, auto-included in `@WebMvcTest`. |
-| 7: Sample and migration guide | Done | Airline sample (tenants = airlines, header `X-Airline`), `README.md`, `MIGRATION.md`. The sample uses HTTP Basic rather than JWT, to keep it self-contained; the JWT integration ships as `RbacJwtAuthoritiesConverter` and `rbac.subject.claim`. |
+| 7: Sample and migration guide | Done | Airline sample as a stateless **JWT resource server**. The subject comes from `preferred_username` and the tenant from the `airline` claim, falling back to the `X-Airline` header. A demo `/auth/token` endpoint stands in for the IdP. Tests use real signed tokens (missing, garbage, tampered, wrong key, expired; claim wins over header; role changes apply to existing tokens). `README.md`, `MIGRATION.md`. |
 | 8: Hardening | Done (partly) | Compatibility checked locally on Boot 3.2.12, 3.3.13, 3.4.10 and 3.5.16. Security review fixes: super-admin escalation (D4) and a guard for the host's Flyway (D3). Publishing: a `release` profile attaches sources and javadoc. `distributionManagement` (Nexus, Artifactory or GitHub Packages) still needs your repository URL. |
 
 **Decisions made during implementation**

@@ -69,15 +69,43 @@ class BookingController {
 
 When a DataSource exists, the RBAC tables (`rbac_permission`, `rbac_role`, `rbac_role_permission`, `rbac_subject_role`) are created automatically. The RBAC migration uses its own Flyway history table, `rbac_schema_history`.
 
-Run the demo:
+Run the demo. It is a stateless JWT resource server, and airline staff tokens carry an `airline` claim:
 
 ```bash
 mvn install
 java -jar rbac-sample-app/target/rbac-sample-app-1.0.0-SNAPSHOT.jar
-curl -u agent-sky:password -H 'X-Airline: SKY' localhost:8080/api/rbac/me
+TOKEN=$(curl -s -X POST localhost:8080/auth/token -H 'Content-Type: application/json' \
+          -d '{"username":"agent-sky","password":"password"}' | jq -r .accessToken)
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/api/rbac/me
 ```
 
-Demo users: `root`, `ops`, `rbac-admin`, `agent-sky`, `agent-blue`, `supervisor-sky` and `passenger`. They all use the password `password`. To run it on PostgreSQL instead of H2, use `docker compose -f rbac-sample-app/docker-compose.yml up -d` and the `postgres` Spring profile.
+Demo users: `root`, `ops`, `rbac-admin`, `passenger`, `agent-sky` / `supervisor-sky` (bound to airline `SKY`) and `agent-blue` (bound to `BLUE`). They all use the password `password`. `/auth/token` is a **demo stand-in for an identity provider**: it signs HS256 tokens with `airline.jwt.secret`. In production, remove it and set `spring.security.oauth2.resourceserver.jwt.issuer-uri` to your IdP (Keycloak, Okta, Azure AD, …). To run the demo on PostgreSQL, use `docker compose -f rbac-sample-app/docker-compose.yml up -d` and the `postgres` profile.
+
+### JWT setup used by the sample
+
+```yaml
+rbac:
+  subject:
+    claim: preferred_username   # RBAC subject id (the JWT "sub" is an opaque UUID)
+  multi-tenancy:
+    enabled: true
+    claim: airline              # tenant from the token; this wins over the header
+    header: X-Airline           # fallback for tokens without the claim (e.g. global ops users)
+```
+
+```java
+@Bean
+JwtAuthenticationConverter jwtAuthenticationConverter(RbacJwtAuthoritiesConverter rbacAuthorities) {
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+    converter.setPrincipalClaimName("preferred_username");
+    converter.setJwtGrantedAuthoritiesConverter(rbacAuthorities);   // ROLE_* + permissions, for legacy hasRole()
+    return converter;
+}
+// http.sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
+//     .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+```
+
+Tokens carry **identity only** (who the user is, and which airline they belong to). Roles and permissions are looked up in RBAC on each request, cached for `rbac.cache.ttl` and evicted as soon as something changes. So a role granted or revoked through the admin API applies to tokens that were already issued, without the user logging in again.
 
 ---
 

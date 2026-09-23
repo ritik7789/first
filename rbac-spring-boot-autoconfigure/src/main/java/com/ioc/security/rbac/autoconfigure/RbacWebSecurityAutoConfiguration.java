@@ -39,7 +39,9 @@ public class RbacWebSecurityAutoConfiguration {
         @ConditionalOnMissingBean
         RbacJwtAuthoritiesConverter rbacJwtAuthoritiesConverter(RbacAuthorityMapper mapper, RbacProperties properties,
                                                                 TenantResolver tenantResolver) {
-            return new RbacJwtAuthoritiesConverter(mapper, properties.getSubject().getClaim(), tenantResolver);
+            RbacProperties.MultiTenancy tenancy = properties.getMultiTenancy();
+            return new RbacJwtAuthoritiesConverter(mapper, properties.getSubject().getClaim(),
+                    tenancy.isEnabled() ? tenancy.getClaim() : null, tenantResolver);
         }
     }
 }
